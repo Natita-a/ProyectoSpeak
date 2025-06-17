@@ -1,0 +1,64 @@
+.practica-container {
+  background-color: #ffffff;
+  padding: 30px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-left: 200px; /* Ajusta esto si tu sidebar es más o menos ancho */
+}
+
+.titulo-practica {
+  font-size: 28px;
+  font-weight: bold;
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.tarjeta-practica {
+  display: flex;
+  background-color: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin: 20px 0;
+  width: 90%; /* Aumenta el ancho para que se vea más grande */
+  max-width: 1000px;
+}
+
+.imagen-practica {
+  width: 50%;
+  object-fit: cover;
+  height: 100%;
+}
+
+.contenido-practica {
+  width: 50%;
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.texto-practica {
+  font-size: 20px;
+  font-weight: 500;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.boton-ir {
+  background-color: #1e3a8a;
+  color: white;
+  padding: 10px 24px;
+  font-size: 16px;
+  border: none;
+  border-radius: 25px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.boton-ir:hover {
+  background-color: #162c6c;
+}
