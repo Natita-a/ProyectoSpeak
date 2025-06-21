@@ -17,6 +17,9 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path,include
 from Proyecto.views import RegistroUsuario
+from Proyecto.views import GuardarProposito
+from Proyecto.views import GuardarPreferencia
+from Proyecto.views import VerificarPreferencias
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
