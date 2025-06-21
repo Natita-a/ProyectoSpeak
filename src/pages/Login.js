@@ -27,8 +27,9 @@ function Copyright() {
   );
 }
 
+
 export default function SignIn() {
-  const navigate = useNavigate(); // para redirigir
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
@@ -46,14 +47,30 @@ export default function SignIn() {
         if (!res.ok) throw new Error('Correo o contraseña incorrectos');
         return res.json();
       })
-      .then(data => {
-        localStorage.setItem('access_token', data.access);
-        localStorage.setItem('refresh_token', data.refresh);
-        alert('Inicio de sesión exitoso');
+     .then(data => {
+      localStorage.setItem('access_token', data.access);
+      localStorage.setItem('refresh_token', data.refresh);
+      alert('Inicio de sesión exitoso'); 
+
+      // Verificar preferencias después del login
+      return fetch('http://localhost:8000/api/verificar-preferencias/', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + data.access,
+        },
+      });
+    })
+    .then(res => res.json())
+    .then(info => {
+      if (info.completo) {
         navigate('/pages/Home');
-      })
-      .catch(err => setError(err.message));
-  };
+      } else {
+        navigate('/pages/Formulario1'); 
+      }
+    })
+    .catch(err => setError(err.message));
+};
 
   return (
     <Container component="main" maxWidth="xs">
