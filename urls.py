@@ -30,6 +30,9 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('accounts/', include('django.contrib.auth.urls')), 
     path('api/registro/', RegistroUsuario.as_view(), name='registro_usuario'),
+     path('api/guardar-proposito/', GuardarProposito.as_view(), name='guardar-proposito'),
+    path('api/guardar-temas/', GuardarPreferencia.as_view(), name='guardar-preferencias'),
+    path('api/verificar-preferencias/', VerificarPreferencias.as_view(), name='verificar_preferencias'),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 
