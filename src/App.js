@@ -56,6 +56,8 @@ import SignUp from './pages/Registro';
 import Home from './pages/Home'
 import PracticaMenu from './components/Practicas';
 import Logout from './components/Logout';
+import CheckboxLabels from './pages/Formulario1';
+import CheckboxLabelsPreferences from './pages/Formulario2';
 
 function App() {
   return (
@@ -65,6 +67,8 @@ function App() {
         <Route path="pages/Login" element={<SignIn />} />
         <Route path="pages/Registro" element={<SignUp />} />
        <Route path="pages/Home" element={<Home />} />
+       <Route path="pages/Formulario1" element={<CheckboxLabels/>}/>
+       <Route path="pages/Formulario2" element={<CheckboxLabelsPreferences/>}/>
         <Route path="pages/Practicas" element={<PracticaMenu />} />
         <Route path="/logout" element={<Logout redirectTo="/" />} />
       </Routes>
