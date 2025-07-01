@@ -6,6 +6,7 @@ import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
 import { useNavigate } from 'react-router-dom';
+import api from '../components/User';
 
 export default function CheckboxLabels() {
   const [selected, setSelected] = React.useState(null);
@@ -28,55 +29,39 @@ export default function CheckboxLabels() {
     setError(null);
   };
 
-  const handleSubmit = async () => {
-    setLoading(true);
-    setError(null);
+  
+ const handleSubmit = async () => {
+  setLoading(true);
+  setError(null);
 
-    const token = localStorage.getItem('access_token');
-    console.log('TOKEN ACTUAL:', token); 
+  try {
+    const response = await api.post('guardar-proposito/', {
+      proposito: selected,
+    });
 
-    if (!token) {
-      setLoading(false);
-      setError('No estás autenticado. Por favor inicia sesión.');
-      return;
-    }
-
-    try {
-      const response = await fetch('http://localhost:8000/api/guardar-proposito/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + token,
-        },
-        body: JSON.stringify({
-          proposito: selected,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        if (data && typeof data === 'object') {
-          const errores = Object.entries(data)
-            .map(([campo, mensaje]) =>
-              `${campo}: ${Array.isArray(mensaje) ? mensaje.join(', ') : mensaje}`
-            )
-            .join(' | ');
-          setError(errores);
-        } else {
-          setError('Error desconocido al guardar.');
-        }
-        throw new Error('Falló la solicitud');
+    console.log('Guardado correctamente:', response.data);
+    setLoading(false);
+    navigate('/pages/Formulario2');
+  } catch (err) {
+    setLoading(false);
+    if (err.response && err.response.data) {
+      const data = err.response.data;
+      if (typeof data === 'object') {
+        const errores = Object.entries(data)
+          .map(([campo, mensaje]) =>
+            `${campo}: ${Array.isArray(mensaje) ? mensaje.join(', ') : mensaje}`
+          )
+          .join(' | ');
+        setError(errores);
+      } else {
+        setError('Error desconocido al guardar.');
       }
-
-      console.log('Guardado correctamente:', data);
-      navigate('/pages/Formulario2');
-    } catch (err) {
-      console.error('Error al enviar:', err);
-      setLoading(false);
+    } else {
+      setError('Error de conexión o servidor.');
     }
-  };
-
+  }
+};
+  
   return (
     <Box
       sx={{
