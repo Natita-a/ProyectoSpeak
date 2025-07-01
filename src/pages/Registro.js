@@ -12,6 +12,7 @@ import Box from '@mui/material/Box';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import Typography from '@mui/material/Typography';
 import Container from '@mui/material/Container';
+import api from '../components/User';
 
 function Copyright() {
   return (
@@ -27,36 +28,27 @@ function Copyright() {
 }
 
 export default function SignUp() {
-const handleSubmit = (event) => {
-  event.preventDefault();
-  const data = new FormData(event.currentTarget);
+const handleSubmit = async (event) => {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
 
-  const email = data.get('email');
-  const password = data.get('password');
+    const email = data.get('email');
+    const password = data.get('password');
 
-  console.log({ email, password }); // Verifica que se obtienen correctamente
+    try {
+      const response = await api.post('registro/', {
+        email,
+        password,
+      });
 
-  fetch('http://localhost:8000/api/registro/', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ email, password }),
-  })
-  .then((response) => {
-    if (!response.ok) throw new Error('Error en el registro');
-    return response.json();
-  })
-  .then((data) => {
-    alert('Usuario registrado con éxito');
-    console.log(data);
-  })
-  .catch((error) => {
-    alert('Error al registrar');
-    console.error(error);
-  });
-};
-
+      alert('Usuario registrado con éxito');
+      console.log(response.data);
+    } catch (error) {
+      alert('Error al registrar');
+      console.error(error);
+    }
+  };
+  
 
   return (
     <Container component="main" maxWidth="xs">
