@@ -97,3 +97,49 @@ class VerificarPreferencias(APIView):
             {'mensaje': 'Usuario registrado con éxito', 'codigo_verificacion': codigo_verificacion},
             status=status.HTTP_201_CREATED
         )
+
+
+
+class GenerarSituacionTemaPropio(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            # Se obtienen las preferencias del usuario
+            preferencias = PreferenciasUsuarios.objects.get(usuario=request.user)
+            temas = preferencias.temas_preferencia
+
+            if not temas:
+                return Response({"error": "No hay temas configurados para este usuario."}, status=400)
+
+            # Elegir un tema aleatorio entre los de preferencia
+            tema_elegido = random.choice(temas)
+
+            # Busca prácticas que coincidan con ese tema
+            situaciones = Practicas.objects.filter(tema=tema_elegido)
+
+            if not situaciones.exists():
+                return Response({"error": f"No hay situaciones registradas para el tema '{tema_elegido}'."}, status=404)
+
+            # Elige una situación aleatoria del tema
+            situacion_elegida = random.choice(list(situaciones))
+
+            return Response({
+                "tema": tema_elegido,
+                "situacion": {
+                    "titulo": situacion_elegida.situacion,
+                    "contexto": situacion_elegida.contexto,
+                    "recomendacion": situacion_elegida.recomendacion,
+                    "tipo_simulacion": situacion_elegida.tipo_simulacion,
+                    "tiempo": situacion_elegida.tiempo,
+                }
+            })
+
+        except PreferenciasUsuarios.DoesNotExist:
+            return Response({"error": "No se encontraron preferencias para este usuario."}, status=404)
+
+        except Exception as e:
+            import traceback
+            print("ERROR DETECTADO:")
+            print(traceback.format_exc())
+            return Response({"error": str(e)}, status=500)
