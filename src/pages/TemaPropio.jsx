@@ -1,0 +1,73 @@
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import '../styles/TemaPropio.css';
+import api from '../components/User';
+
+
+const PracticaTemaPropio = () => {
+  const navigate = useNavigate();
+  const [tema, setTema] = useState('');
+  const [situacion, setSituacion] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+  const fetchDatos = async () => {
+    try {
+      const res = await api.get('generar-temas/');
+      const data = res.data;
+      setTema(data.tema);
+      setSituacion(data.situacion);
+      setLoading(false);
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Error al obtener datos');
+      setLoading(false);
+    }
+  };
+
+  fetchDatos();
+}, []);
+
+  // Para que cambie solamente en esta pagina el body
+  useEffect(() => {
+    document.body.classList.add('fondo-tema-propio');
+    return () => {
+      document.body.classList.remove('fondo-tema-propio');
+    };
+  }, []);
+
+  if (loading) return <p>Cargando situación...</p>;
+  if (error) return <p>Error: {error}</p>;
+
+  return (
+    <div id="tema-propio1">
+      <h2 className="titulo">
+        Tema seleccionado: <span className="tema">{tema}</span>
+      </h2>
+
+      <h3 className="subtitulo">Situación para practicar:</h3>
+      {situacion && (
+        <div id="tema-propio2" className="situacion">
+          <p>
+            <strong>Título:</strong> {situacion.titulo}
+          </p>
+          <p>
+            <strong>Contexto:</strong> {situacion.contexto}
+          </p>
+          <p>
+            <strong>Recomendación:</strong> {situacion.recomendacion}
+          </p>
+          <p>
+            <strong>Tiempo:</strong> {situacion.tiempo} minutos
+          </p>
+
+          <button className="boton-tema" onClick={() => navigate('pages/PracticaPropia')}>
+            Iniciar Práctica
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default PracticaTemaPropio;
