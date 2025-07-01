@@ -7,6 +7,7 @@ import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
 import Grid from '@mui/material/Grid';
 import { useNavigate } from 'react-router-dom';
+import api from '../components/User';
 
 export default function CheckboxLabelsPreferences() {
   const [selected, setSelected] = React.useState([]);
@@ -38,40 +39,34 @@ export default function CheckboxLabelsPreferences() {
     }
   };
 
-  const handleSubmit = async () => {
-    setLoading(true);
-    setError(null);
+    const handleSubmit = async () => {
+  setLoading(true);
+  setError(null);
 
-    try {
-      const response = await fetch('http://localhost:8000/api/guardar-temas/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + token,
-        },
-        body: JSON.stringify({ temas_preferencia: selected }),
-      });
+  try {
+    const response = await api.post('guardar-temas/', {
+      temas_preferencia: selected,
+    });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        const errores = Object.entries(data)
-          .map(([campo, mensaje]) =>
-            `${campo}: ${Array.isArray(mensaje) ? mensaje.join(', ') : mensaje}`
-          )
-          .join(' | ');
-        setError(errores || 'Error desconocido.');
-        setLoading(false);
-        return;
-      }
-
-      navigate('/pages/Home');
-    } catch (err) {
-      console.error('Error al enviar:', err);
+    console.log('Preferencias guardadas:', response.data);
+    setLoading(false);
+    navigate('/pages/Home');
+  } catch (err) {
+    setLoading(false);
+    if (err.response && err.response.data) {
+      const data = err.response.data;
+      const errores = Object.entries(data)
+        .map(([campo, mensaje]) =>
+          `${campo}: ${Array.isArray(mensaje) ? mensaje.join(', ') : mensaje}`
+        )
+        .join(' | ');
+      setError(errores || 'Error desconocido.');
+    } else {
       setError('Error de red al guardar las preferencias');
-      setLoading(false);
     }
-  };
+  }
+};
+
 
   return (
     <Box
