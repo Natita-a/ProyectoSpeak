@@ -13,6 +13,7 @@ import Box from '@mui/material/Box';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import Typography from '@mui/material/Typography';
 import Container from '@mui/material/Container';
+import api from '../components/User';
 
 function Copyright() {
   return (
@@ -34,43 +35,40 @@ export default function SignIn() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
 
-  const handleSubmit = (event) => {
+ const handleSubmit = async (event) => {
     event.preventDefault();
     setError(null);
 
-    fetch('http://localhost:8000/api/token/', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: email, password }),
-    })
-      .then(res => {
-        if (!res.ok) throw new Error('Correo o contraseña incorrectos');
-        return res.json();
-      })
-     .then(data => {
-      localStorage.setItem('access_token', data.access);
-      localStorage.setItem('refresh_token', data.refresh);
-      alert('Inicio de sesión exitoso'); 
-
-      // Verificar preferencias después del login
-      return fetch('http://localhost:8000/api/verificar-preferencias/', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + data.access,
-        },
+    try {
+      // Obteniene el access y refresh token
+      const loginRes = await api.post('token/', {
+        username: email,
+        password,
       });
-    })
-    .then(res => res.json())
-    .then(info => {
-      if (info.completo) {
+
+      const { access, refresh } = loginRes.data;
+      localStorage.setItem('access_token', access);
+      localStorage.setItem('refresh_token', refresh);
+      alert('Inicio de sesión exitoso');
+
+      //Verifica si el usuario ya completó sus preferencias
+      const prefRes = await api.get('verificar-preferencias/');
+
+      if (prefRes.data.completo) {
         navigate('/pages/Home');
       } else {
-        navigate('/pages/Formulario1'); 
+        navigate('/pages/Formulario1');
       }
-    })
-    .catch(err => setError(err.message));
-};
+
+    } catch (err) {
+      if (err.response?.data?.detail) {
+        setError(err.response.data.detail);
+      } else {
+        setError('Correo o contraseña incorrectos');
+      }
+    }
+  };
+
 
   return (
     <Container component="main" maxWidth="xs">
