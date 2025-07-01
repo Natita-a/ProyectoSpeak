@@ -58,18 +58,66 @@ import PracticaMenu from './components/Practicas';
 import Logout from './components/Logout';
 import CheckboxLabels from './pages/Formulario1';
 import CheckboxLabelsPreferences from './pages/Formulario2';
+import PracticaTemaPropio from './pages/TemaPropio';
 
+function PrivateRoute({ children }) {
+  const token = localStorage.getItem('access_token');
+  return token ? children : <Navigate to="/pages/Login" replace />;
+}
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    setIsAuthenticated(!!token);  
+  }, []);
+
   return (
     <Router>
       <Routes>
         <Route path="/" element={<LandingPage />} />
-        <Route path="pages/Login" element={<SignIn />} />
-        <Route path="pages/Registro" element={<SignUp />} />
-       <Route path="pages/Home" element={<Home />} />
-       <Route path="pages/Formulario1" element={<CheckboxLabels/>}/>
-       <Route path="pages/Formulario2" element={<CheckboxLabelsPreferences/>}/>
-        <Route path="pages/Practicas" element={<PracticaMenu />} />
+        <Route path="/pages/Login" element={<SignIn />} />
+        <Route path="/pages/Registro" element={<SignUp />} />
+        <Route
+          path="/pages/Home"
+          element={
+            <PrivateRoute>
+              <Home />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/pages/Formulario1"
+          element={
+            <PrivateRoute>
+              <CheckboxLabels />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/pages/Formulario2"
+          element={
+            <PrivateRoute>
+              <CheckboxLabelsPreferences />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/pages/Practicas"
+          element={
+            <PrivateRoute>
+              <PracticaMenu />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/practica/tema-propio"
+          element={
+            <PrivateRoute>
+              <PracticaTemaPropio />
+            </PrivateRoute>
+          }
+        />
         <Route path="/logout" element={<Logout redirectTo="/" />} />
       </Routes>
     </Router>
