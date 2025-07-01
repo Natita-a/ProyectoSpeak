@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import CssBaseline from '@mui/material/CssBaseline';
 import TextField from '@mui/material/TextField';
@@ -61,11 +60,9 @@ const handleSubmit = async (event) => {
           alignItems: 'center',
         }}
       >
-        <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
-          <LockOutlinedIcon />
-        </Avatar>
+
         <Typography component="h1" variant="h5">
-          Sign Up
+          <img src="/images/favicon.png" alt="Logo" style={{ width: '80px', height: '80px' }} />
         </Typography>
         <Box component="form" noValidate sx={{ mt: 1 }} onSubmit={handleSubmit}>
           <TextField
