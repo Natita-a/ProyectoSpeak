@@ -36,6 +36,7 @@ urlpatterns = [
      path('api/guardar-proposito/', GuardarProposito.as_view(), name='guardar-proposito'),
     path('api/guardar-temas/', GuardarPreferencia.as_view(), name='guardar-preferencias'),
     path('api/verificar-preferencias/', VerificarPreferencias.as_view(), name='verificar_preferencias'),
+    path('api/generar-temas/', GenerarSituacionTemaPropio.as_view(), name='generar-temas'),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 
