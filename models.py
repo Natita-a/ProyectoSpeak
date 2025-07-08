@@ -10,16 +10,19 @@ from django.contrib.auth.models import User
 
 
 
+
 class AspectosEvaluados(models.Model):
     id = models.BigAutoField(primary_key=True)
-    practica = models.ForeignKey('Practicas', models.DO_NOTHING, blank=True, null=True)
+    practica_hecha = models.ForeignKey('PracticasHechas', models.DO_NOTHING, blank=True, null=True)
+    transcripcion = models.TextField(blank=True, null=True)
+    usuario = models.ForeignKey('Usuarios', models.DO_NOTHING, blank=True, null=True)
     lenguaje_corporal = models.TextField(blank=True, null=True)
     palabras_por_minuto = models.IntegerField(blank=True, null=True)
     tono = models.TextField(blank=True, null=True)
     claridad = models.TextField(blank=True, null=True)
     coherencia = models.TextField(blank=True, null=True)
     velocidad = models.TextField(blank=True, null=True)
-    errores = models.TextField(blank=True, null=True)  # This field type is a guess.
+    errores = models.TextField(blank=True, null=True) 
     retroalimentacion = models.TextField(blank=True, null=True)
     puntaje = models.IntegerField(blank=True, null=True)
 
