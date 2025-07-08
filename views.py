@@ -143,3 +143,115 @@ class GenerarSituacionTemaPropio(APIView):
             print("ERROR DETECTADO:")
             print(traceback.format_exc())
             return Response({"error": str(e)}, status=500)
+
+
+class EscenarioPracticaPropia(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        #Se obtiene user 
+        user = request.user
+
+        try:
+            usuario_personalizado = Usuarios.objects.get(user=user)
+        except Usuarios.DoesNotExist:
+            return Response({"error": "Usuario personalizado no encontrado"}, status=404)
+
+        #Se obtiene el id de la practica a iniciar
+        simulacion_id = request.data.get('simulacion_id')
+        if not simulacion_id:
+            return Response({"error": "Falta el ID de la práctica"}, status=400)
+
+     
+        try:
+            practica = Practicas.objects.get(id=simulacion_id)
+            duracion=practica.tiempo
+        except Practicas.DoesNotExist:
+            return Response({"error": "Práctica no encontrada"}, status=404)
+
+        practica_hecha = PracticasHechas.objects.create(
+            usuario=usuario_personalizado,
+            simulacion=practica,
+            estado='iniciada',
+            tiempo_duracion=duracion,
+            resultado={},
+            fecha=timezone.now()
+        )
+
+        return Response({
+            "mensaje": "Práctica iniciada correctamente",
+            "practica_hecha_id": practica_hecha.id,
+        }, status=201)
+    
+
+
+                    
+
+
+class TranscripcionAudioView(APIView):
+    parser_classes = [MultiPartParser]
+    
+
+    def post(self, request):
+        audio_file = request.FILES.get('audio')
+        if not audio_file:
+            return Response({"error": "No se recibió archivo"}, status=400)
+
+        try:
+            
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+                for chunk in audio_file.chunks():
+                    tmp.write(chunk)
+                temp_path = tmp.name
+
+            model = whisper.load_model("small")
+            result = model.transcribe(temp_path)
+            texto = result['text']
+
+     
+            os.remove(temp_path)
+
+            return Response({"texto": texto})
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+        
+
+
+
+class GuardarTranscripcionView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        practica_hecha_id = request.data.get('practica_hecha_id')
+        transcripcion = request.data.get('transcripcion')
+        duracion_minutos = request.data.get('duracion')
+
+        if not practica_hecha_id or transcripcion is None:
+            return Response({"error": "Faltan datos requeridos"}, status=400)
+
+        try:
+            practica_hecha = PracticasHechas.objects.get(id=practica_hecha_id)
+        except PracticasHechas.DoesNotExist:
+            return Response({"error": "Práctica hecha no encontrada"}, status=404)
+
+        usuario = practica_hecha.usuario
+
+        palabras = len(transcripcion.split())
+        try:
+            duracion_minutos = float(duracion_minutos)
+            if duracion_minutos <= 0:
+                raise ValueError("Duración no válida")
+            ppm = int(palabras / duracion_minutos)
+        except (ValueError, TypeError):
+            ppm = 0
+
+        evaluacion = AspectosEvaluados.objects.create(
+            usuario=usuario,
+            practica_hecha=practica_hecha,
+            transcripcion=transcripcion,
+            palabras_por_minuto=ppm
+        )
+
+        return Response({"mensaje": "Transcripción guardada correctamente", "id": evaluacion.id}, status=201)
+
