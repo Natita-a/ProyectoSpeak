@@ -180,3 +180,17 @@ class Usuarios(models.Model):
     class Meta:
         managed = False
         db_table = 'usuarios'
+
+class PracticasHechas(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    usuario = models.ForeignKey('Usuarios', models.DO_NOTHING)
+    simulacion = models.ForeignKey('Practicas', models.DO_NOTHING)
+    fecha = models.DateTimeField(blank=True, null=True)
+    estado = models.TextField(blank=True, null=True)
+    resultado = models.JSONField(blank=True, null=True)
+    tiempo_duracion = models.IntegerField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'practicas_hechas'
+
