@@ -59,6 +59,7 @@ import Logout from './components/Logout';
 import CheckboxLabels from './pages/Formulario1';
 import CheckboxLabelsPreferences from './pages/Formulario2';
 import PracticaTemaPropio from './pages/TemaPropio';
+import Recorder from './pages/PracticaPropia';
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem('access_token');
@@ -115,6 +116,14 @@ function App() {
           element={
             <PrivateRoute>
               <PracticaTemaPropio />
+            </PrivateRoute>
+          }
+        />
+           <Route
+          path="/pages/PracticaPropia"
+          element={
+            <PrivateRoute>
+              <Recorder />
             </PrivateRoute>
           }
         />
