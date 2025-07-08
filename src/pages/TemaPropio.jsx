@@ -61,9 +61,27 @@ const PracticaTemaPropio = () => {
             <strong>Tiempo:</strong> {situacion.tiempo} minutos
           </p>
 
-          <button className="boton-tema" onClick={() => navigate('pages/PracticaPropia')}>
-            Iniciar Práctica
-          </button>
+        <button
+  className="boton-tema"
+  onClick={async () => {
+    try {
+     const response = await api.post('escena-propia/', {
+        simulacion_id: situacion.id  // Usar el id de la situacion
+      });
+      navigate('/pages/PracticaPropia',{
+        state:{
+          tiempo:situacion.tiempo,
+           practica_hecha_id: response.data.practica_hecha_id
+        }
+      });
+    } catch (error) {
+      alert('Error al iniciar la práctica');
+      console.error(error);
+    }
+  }}
+>
+  Iniciar Práctica
+</button>
         </div>
       )}
     </div>
