@@ -20,6 +20,10 @@ from Proyecto.views import RegistroUsuario
 from Proyecto.views import GuardarProposito
 from Proyecto.views import GuardarPreferencia
 from Proyecto.views import VerificarPreferencias
+from Proyecto.views import GenerarSituacionTemaPropio
+from Proyecto.views import EscenarioPracticaPropia
+from Proyecto.views import TranscripcionAudioView
+from Proyecto.views import GuardarTranscripcionView
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
@@ -36,6 +40,9 @@ urlpatterns = [
      path('api/guardar-proposito/', GuardarProposito.as_view(), name='guardar-proposito'),
     path('api/guardar-temas/', GuardarPreferencia.as_view(), name='guardar-preferencias'),
     path('api/verificar-preferencias/', VerificarPreferencias.as_view(), name='verificar_preferencias'),
+    path('api/generar-temas/', GenerarSituacionTemaPropio.as_view(), name='generar-temas'),
+    path('api/escena-propia/',EscenarioPracticaPropia.as_view(),name='escena-propia'),
+    path('api/transcripcion/', TranscripcionAudioView.as_view(), name='transcripcion'),
     path('api/generar-temas/', GenerarSituacionTemaPropio.as_view(), name='generar-temas'),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
