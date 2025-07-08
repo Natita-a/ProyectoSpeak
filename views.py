@@ -7,8 +7,15 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from .models import Usuarios
 from .models import PreferenciasUsuarios
 from .serializers import PreferenciasUsuariosSerializer
+from django.utils import timezone 
+from rest_framework.parsers import MultiPartParser
+import os
 import random
 import string
+import requests
+import json
+import whisper
+import tempfile
 
 class RegistroUsuario(APIView):
     def post(self, request):
