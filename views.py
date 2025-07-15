@@ -9,6 +9,7 @@ from .models import PreferenciasUsuarios
 from .serializers import PreferenciasUsuariosSerializer
 from django.utils import timezone 
 from rest_framework.parsers import MultiPartParser
+from collections import Counter
 import os
 import random
 import string
@@ -16,6 +17,8 @@ import requests
 import json
 import whisper
 import tempfile
+import spacy
+import ollama
 
 class RegistroUsuario(APIView):
     def post(self, request):
