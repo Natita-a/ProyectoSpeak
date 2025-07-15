@@ -225,7 +225,6 @@ class TranscripcionAudioView(APIView):
         
 
 
-
 class GuardarTranscripcionView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -233,6 +232,8 @@ class GuardarTranscripcionView(APIView):
         practica_hecha_id = request.data.get('practica_hecha_id')
         transcripcion = request.data.get('transcripcion')
         duracion_minutos = request.data.get('duracion')
+
+        #Se verifica que la practica existe en la base de datos
 
         if not practica_hecha_id or transcripcion is None:
             return Response({"error": "Faltan datos requeridos"}, status=400)
@@ -244,6 +245,7 @@ class GuardarTranscripcionView(APIView):
 
         usuario = practica_hecha.usuario
 
+        #Logica para obtener las palabras por minuto
         palabras = len(transcripcion.split())
         try:
             duracion_minutos = float(duracion_minutos)
@@ -253,12 +255,162 @@ class GuardarTranscripcionView(APIView):
         except (ValueError, TypeError):
             ppm = 0
 
+        print(f"Palabras: {palabras}")
+        print(f"Duración (minutos): {duracion_minutos}")
+
+
+        #Analiza la velocidad del discurso
+        if ppm > 200:
+             velocidad="Hablas demasiado rápido! Deberías reducir tu velocidad."
+        elif ppm > 170:
+            velocidad="Hablas un poco rápido."
+        elif ppm < 100:
+            velocidad="Hablas muy lento."
+        else:
+            velocidad="Buena velocidad."
+
+        #Analiza las muletillas en el discurso
+
+        muletillas_detectadas = detectar_muletillas(transcripcion)
+
+
+        #Obtiene la coherencia
+
+        coherencia=obtener_coherencia(practica_hecha_id,transcripcion)
+
+
+         #Obtiene la retroalimentacion
+
+        retroalimentacion = obtener_retroalimentacion(practica_hecha_id,transcripcion)
+ 
+         
         evaluacion = AspectosEvaluados.objects.create(
             usuario=usuario,
             practica_hecha=practica_hecha,
             transcripcion=transcripcion,
-            palabras_por_minuto=ppm
+            palabras_por_minuto=ppm,
+            velocidad=velocidad,
+            errores=muletillas_detectadas,
+            coherencia=coherencia,
+            retroalimentacion=retroalimentacion
+                  
         )
 
         return Response({"mensaje": "Transcripción guardada correctamente", "id": evaluacion.id}, status=201)
+    
 
+
+
+
+
+nlp=spacy.load("es_core_news_sm")
+
+muletillas_comunes={'este','eh','bueno','entonces','pos','pues','mmm','ah','vale','sabes','o','sea','como'}
+
+def detectar_muletillas(texto):
+    doc=nlp(texto.lower())
+    palabras_repetidas=Counter()
+    posibles_muletillas={}
+
+    for token in doc:
+        if token.is_punct or token.is_space or len(token.text)<=2:
+            continue
+        palabras_repetidas[token.text]+=1
+        for palabra,frecuencia in palabras_repetidas.items():
+            token_filtrado=next((t for t in doc if t.text==palabra),None)
+            if frecuencia >2 and(
+                palabra in muletillas_comunes or
+                (token_filtrado and token_filtrado.pos_ in {"INTJ", "CCONJ", "SCONJ", "PART"})):
+            
+                posibles_muletillas[palabra] = frecuencia
+
+    return posibles_muletillas
+
+def obtener_coherencia(practica_hecha_id, texto_transcripcion):
+    try:
+        practica_hecha = PracticasHechas.objects.get(id=practica_hecha_id)
+        practica = practica_hecha.simulacion
+
+        situacion = practica.situacion
+        contexto = practica.contexto
+        recomendacion=practica.recomendacion
+
+        prompt_llama = f"""
+Eres un evaluador experto en comunicación oral.
+
+A continuación se presenta una situación , un  contexto, y una recomendacion de un discurso para evaluar:
+
+Situación: {situacion}
+Contexto: {contexto}
+Recomendacion:{recomendacion}
+Texto: {texto_transcripcion}
+
+Evalúa el discurso en relacion a la situacion, el contexto y la recomendacion.Luego, evalúa la coherencia estructural (conexión lógica, fluidez).Esta evaluacion debe estar resumida en 50 palabras en su conjunto
+
+No intentes justificar contenido irrelevante inventando conexiones que no existen.
+"""
+
+        response = requests.post(
+            "http://localhost:11434/api/generate",  # Puerto y endpoint local de Ollama
+            json={
+                "model": "llama3.2",
+                "prompt": prompt_llama,
+                "stream": False
+            }
+        )
+
+        resp_json = response.json()
+        if "response" in resp_json:
+            return resp_json["response"]
+        else:
+            return f"Error: respuesta inesperada {resp_json}"
+
+    except PracticasHechas.DoesNotExist:
+        return "No se encontró la práctica hecha"
+    except requests.exceptions.RequestException as e:
+        return f"Error en la conexión con Ollama: {e}"
+
+
+
+
+        
+def obtener_retroalimentacion(practica_hecha_id,texto_transcripcion):
+    try:
+        practica_hecha=PracticasHechas.objects.get(id=practica_hecha_id)
+        practica=practica_hecha.simulacion
+
+        situacion=practica.situacion
+        contexto=practica.contexto
+        recomendacion=practica.recomendacion
+
+        prompt_llama = f"""
+Eres un coach que da retroalimentación para mejorar la fluidez al hablar, detectando velocidad, pausas y muletillas.Evalúa este texto y dame 2 consejos claros para mejorar.
+
+A continuación se presenta una situación , un  contexto, y una recomendacion de un discurso para evaluar:
+
+Situación: {situacion}
+Contexto: {contexto}
+Recomendacion:{recomendacion}
+Texto: {texto_transcripcion}
+
+"""
+
+        response = requests.post(
+            "http://localhost:11434/api/generate",  
+            json={
+                "model": "llama3.2",
+                "prompt": prompt_llama,
+                "stream": False
+            }
+        )
+
+        resp_json = response.json()
+        if "response" in resp_json:
+            return resp_json["response"]
+        else:
+            return f"Error: respuesta inesperada {resp_json}"
+    
+    except PracticasHechas.DoesNotExist:
+        return "No se encontró la práctica hecha"
+    except requests.exceptions.RequestException as e:
+        return f"Error en la conexión con Ollama: {e}"
