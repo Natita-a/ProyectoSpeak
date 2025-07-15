@@ -41,63 +41,61 @@ export default function Recorder() {
     return `${h}:${m}:${s}`;
   };
 
-  const toggleRecording = async () => {
-    if (isRecording) {
-      mediaRecorder.current?.stop();
-      setIsRecording(false);
-    } else {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorder.current = new MediaRecorder(stream);
+ const duracionRef = useRef(0); //Almacena la duracion real
 
-        mediaRecorder.current.ondataavailable = async (e) => {
-          const audioBlob = new Blob([e.data], { type: "audio/wav" });
+const toggleRecording = async () => {
+  if (isRecording) {
+    const tiempoFin = Date.now();
+    const duracionSegundos = Math.floor((tiempoFin - tiempoInicioRef.current) / 1000);
+    duracionRef.current = duracionSegundos / 60; //Se convierte a minutos
+    mediaRecorder.current?.stop();
+    setIsRecording(false);
+  } else {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder.current = new MediaRecorder(stream);
 
-          const formData = new FormData();
-          formData.append('audio', audioBlob, 'grabacion.wav');
+      mediaRecorder.current.ondataavailable = async (e) => {
+        const audioBlob = new Blob([e.data], { type: "audio/wav" });
 
-          // Obtener practica_hecha_id de location.state
-          const practicaHechaId = location.state?.practica_hecha_id;
-          if (!practicaHechaId) {
-            setMensajeGuardado("Error: No se pudo identificar la práctica.");
-            return;
-          }
-          formData.append('practica_hecha_id', practicaHechaId);
+        const formData = new FormData();
+        formData.append('audio', audioBlob, 'grabacion.wav');
 
-          try {
-            //  Subir audio y obtener transcripción
-            const response = await api.post('transcripcion/', formData);
-            const textoTranscrito = response.data.texto;
-            setTranscripcion(textoTranscrito);
+        const practicaHechaId = location.state?.practica_hecha_id;
+        if (!practicaHechaId) {
+          setMensajeGuardado("Error: No se pudo identificar la práctica.");
+          return;
+        }
+        formData.append('practica_hecha_id', practicaHechaId);
 
-            // Guarda la transcripción en aspectos_evaluados
+        try {
+          const response = await api.post('transcripcion/', formData);
+          const textoTranscrito = response.data.texto;
+          setTranscripcion(textoTranscrito);
 
-          const tiempoFin=Date.now();
-          const duracionRealSegundos = Math.max(1, Math.floor((tiempoFin - tiempoInicioRef.current) / 1000));
-          const duracionMinutos=duracionRealSegundos/60
+          const saveResponse = await api.post('guardar-transcripcion/', {
+            practica_hecha_id: practicaHechaId,
+            transcripcion: textoTranscrito,
+            duracion: duracionRef.current //  Duración medida exactamente
+          });
+          setMensajeGuardado(saveResponse.data.mensaje);
+        } catch (error) {
+          console.error('Error durante la transcripción o guardado:', error);
+          setMensajeGuardado("Error al procesar la transcripción.");
+        }
+      };
 
-            const saveResponse = await api.post('guardar-transcripcion/', {
-              practica_hecha_id: practicaHechaId,
-              transcripcion: textoTranscrito,
-              duracion:duracionMinutos
-            });
-            setMensajeGuardado(saveResponse.data.mensaje);
-          } catch (error) {
-            console.error('Error durante la transcripción o guardado:', error);
-            setMensajeGuardado("Error al procesar la transcripción.");
-          }
-        };
-
-        tiempoInicioRef.current=Date.now();
-        mediaRecorder.current.start();
-        setIsRecording(true);
-        setMensajeGuardado('');
-      } catch (err) {
-        console.error("Error al acceder al micrófono:", err);
-        setMensajeGuardado("Error al acceder al micrófono.");
-      }
+      tiempoInicioRef.current = Date.now(); // Se guarda el inicia en esta parte
+      mediaRecorder.current.start();
+      setIsRecording(true);
+      setMensajeGuardado('');
+    } catch (err) {
+      console.error("Error al acceder al micrófono:", err);
+      setMensajeGuardado("Error al acceder al micrófono.");
     }
-  };
+  }
+};
+
 
   return (
     <div className="recorder-container">
