@@ -22,13 +22,14 @@ class AspectosEvaluados(models.Model):
     claridad = models.TextField(blank=True, null=True)
     coherencia = models.TextField(blank=True, null=True)
     velocidad = models.TextField(blank=True, null=True)
-    errores = models.TextField(blank=True, null=True) 
+    errores = models.JSONField(blank=True, null=True)#Nuevo campo
     retroalimentacion = models.TextField(blank=True, null=True)
     puntaje = models.IntegerField(blank=True, null=True)
 
     class Meta:
         managed = False
         db_table = 'aspectos_evaluados'
+
 
 
 class AuthGroup(models.Model):
