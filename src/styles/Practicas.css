@@ -1,11 +1,11 @@
 .practica-container {
   background-color: #ffffff;
-  padding: 30px;
+  padding: 50px;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-left: 200px; /* Ajusta esto si tu sidebar es más o menos ancho */
+  margin-left: 300px; /* Ajusta esto si tu sidebar es más o menos ancho */
 }
 
 .titulo-practica {
