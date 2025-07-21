@@ -9,7 +9,7 @@ import Recorder from "../components/Recorder";
 function PracticaPropia() {
   return (
     <>
-      <Recorder />
+      
     </>
   );
 }
