@@ -13,10 +13,10 @@
 }
 
 .sidenav{
-    width: 240px;
+    width: 230px;
     background: #f5f5f5;
     position: absolute;
-    height: 95vh;
+    height: 120vh;
     padding: 0  30px;
     transition: all 1s;
 }
