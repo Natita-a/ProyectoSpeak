@@ -6,6 +6,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from .models import Usuarios
 from .models import PreferenciasUsuarios
+from .models import Practicas
+from .models import PracticasHechas
+from .models import AspectosEvaluados
 from .serializers import PreferenciasUsuariosSerializer
 from django.utils import timezone 
 from rest_framework.parsers import MultiPartParser
@@ -20,7 +23,12 @@ import tempfile
 import spacy
 import ollama
 
+
+
+
 class RegistroUsuario(APIView):
+
+
     def post(self, request):
 
         correo = request.data.get('email')
@@ -38,6 +46,19 @@ class RegistroUsuario(APIView):
 
 
         codigo_verificacion = ''.join(random.choices(string.digits, k=6))
+
+
+        perfil = Usuarios.objects.create(
+            user=user,
+            verificado=False,
+            codigo_verificacion=codigo_verificacion
+        )
+
+
+        return Response(
+            {'mensaje': 'Usuario registrado con éxito', 'codigo_verificacion': codigo_verificacion},
+            status=status.HTTP_201_CREATED
+        )
 
 
 class GuardarProposito(APIView):
@@ -94,19 +115,9 @@ class VerificarPreferencias(APIView):
                 return Response({'completo': False})
         except PreferenciasUsuarios.DoesNotExist:
             return Response({'completo': False})
+        
 
 
-        perfil = Usuarios.objects.create(
-            user=user,
-            verificado=False,
-            codigo_verificacion=codigo_verificacion
-        )
-
-
-        return Response(
-            {'mensaje': 'Usuario registrado con éxito', 'codigo_verificacion': codigo_verificacion},
-            status=status.HTTP_201_CREATED
-        )
 
 
 
@@ -137,6 +148,7 @@ class GenerarSituacionTemaPropio(APIView):
             return Response({
                 "tema": tema_elegido,
                 "situacion": {
+                     "id": situacion_elegida.id,
                     "titulo": situacion_elegida.situacion,
                     "contexto": situacion_elegida.contexto,
                     "recomendacion": situacion_elegida.recomendacion,
@@ -153,6 +165,43 @@ class GenerarSituacionTemaPropio(APIView):
             print("ERROR DETECTADO:")
             print(traceback.format_exc())
             return Response({"error": str(e)}, status=500)
+        
+
+
+
+
+class GenerarSituacionTemaAleatorio(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+           
+            situaciones_varias=Practicas.objects.all()
+
+            if not situaciones_varias.exists():
+                return Response({"error":"No hay situaciones registradas."},status=404)
+            
+            situacion_elegida=random.choice(list(situaciones_varias))
+
+            return Response({
+                "tema":situacion_elegida.tema,
+                "situacion": {
+                     "id": situacion_elegida.id,
+                    "titulo": situacion_elegida.situacion,
+                    "contexto": situacion_elegida.contexto,
+                    "recomendacion": situacion_elegida.recomendacion,
+                    "tipo_simulacion": situacion_elegida.tipo_simulacion,
+                    "tiempo": situacion_elegida.tiempo,
+                }
+            })
+
+        except Exception as e:
+            import traceback
+            print("ERROR DETECTADO:")
+            print(traceback.format_exc())
+            return Response({"error": str(e)}, status=500)
+        
+
 
 
 class EscenarioPracticaPropia(APIView):
@@ -180,7 +229,8 @@ class EscenarioPracticaPropia(APIView):
             return Response({"error": "Práctica no encontrada"}, status=404)
 
         practica_hecha = PracticasHechas.objects.create(
-            usuario=usuario_personalizado,
+           # usuario=usuario_personalizado,
+            usuario=user,
             simulacion=practica,
             estado='iniciada',
             tiempo_duracion=duracion,
@@ -193,6 +243,60 @@ class EscenarioPracticaPropia(APIView):
             "practica_hecha_id": practica_hecha.id,
         }, status=201)
     
+
+
+
+class EscenarioPracticaAleatoria(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        #Se obtiene user 
+        user = request.user
+
+        try:
+            usuario_personalizado = Usuarios.objects.get(user=user)
+        except Usuarios.DoesNotExist:
+            return Response({"error": "Usuario personalizado no encontrado"}, status=404)
+
+        #Se obtiene el id de la practica a iniciar
+        simulacion_id = request.data.get('simulacion_id')
+        if not simulacion_id:
+            return Response({"error": "Falta el ID de la práctica"}, status=400)
+
+     
+        try:
+            practica = Practicas.objects.get(id=simulacion_id)
+            duracion=practica.tiempo
+        except Practicas.DoesNotExist:
+            return Response({"error": "Práctica no encontrada"}, status=404)
+
+        practica_hecha = PracticasHechas.objects.create(
+            #usuario=usuario_personalizado,
+            usuario=user,
+            simulacion=practica,
+            estado='iniciada',
+            tiempo_duracion=duracion,
+            resultado={},
+            fecha=timezone.now()
+        )
+
+        return Response({
+            "mensaje": "Práctica iniciada correctamente",
+            "practica_hecha_id": practica_hecha.id,
+        }, status=201)
+    
+
+
+
+
+
+
+
+
+
+
+
+
 
 
                     
@@ -226,6 +330,7 @@ class TranscripcionAudioView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=500)
         
+
 
 
 class GuardarTranscripcionView(APIView):
@@ -417,3 +522,86 @@ Texto: {texto_transcripcion}
         return "No se encontró la práctica hecha"
     except requests.exceptions.RequestException as e:
         return f"Error en la conexión con Ollama: {e}"
+    
+
+
+
+
+
+
+
+class GenerarSituacionModoDebate(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+
+            # Busca prácticas que coincidan con ese tema
+            situaciones = Practicas.objects.filter(tipo_simulacion="modo_debate")
+
+            if not situaciones.exists():
+                return Response({"error": f"No hay situaciones registradas para el tema '{tema_elegido}'."}, status=404)
+
+            # Elige una situación aleatoria del tema
+            situacion_elegida = random.choice(list(situaciones))
+
+            return Response({
+                "tema": situacion_elegida.tema,
+                "situacion": {
+                     "id": situacion_elegida.id,
+                    "titulo": situacion_elegida.situacion,
+                    "contexto": situacion_elegida.contexto,
+                    "recomendacion": situacion_elegida.recomendacion,
+                    "tipo_simulacion": situacion_elegida.tipo_simulacion,
+                    "tiempo": situacion_elegida.tiempo,
+                }
+            })
+
+        except PreferenciasUsuarios.DoesNotExist:
+            return Response({"error": "No se encontraron simulacion en modo debate."}, status=404)
+
+        except Exception as e:
+            import traceback
+            print("ERROR DETECTADO:")
+            print(traceback.format_exc())
+            return Response({"error": str(e)}, status=500)
+        
+
+
+
+        
+class GenerarSituacionModoExposicion(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+
+            # Busca prácticas que coincidan con ese tema
+            situaciones = Practicas.objects.filter(tipo_simulacion="modo_exposicion")
+
+            if not situaciones.exists():
+                return Response({"error": f"No hay situaciones registradas para el tema '{tema_elegido}'."}, status=404)
+
+            # Elige una situación aleatoria del tema
+            situacion_elegida = random.choice(list(situaciones))
+
+            return Response({
+                "tema": situacion_elegida.tema,
+                "situacion": {
+                     "id": situacion_elegida.id,
+                    "titulo": situacion_elegida.situacion,
+                    "contexto": situacion_elegida.contexto,
+                    "recomendacion": situacion_elegida.recomendacion,
+                    "tipo_simulacion": situacion_elegida.tipo_simulacion,
+                    "tiempo": situacion_elegida.tiempo,
+                }
+            })
+
+        except PreferenciasUsuarios.DoesNotExist:
+            return Response({"error": "No se encontraron simulacion en modo exposicion."}, status=404)
+
+        except Exception as e:
+            import traceback
+            print("ERROR DETECTADO:")
+            print(traceback.format_exc())
+            return Response({"error": str(e)}, status=500)
