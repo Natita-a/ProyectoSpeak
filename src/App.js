@@ -48,29 +48,44 @@ function App() {
 export default App;
 */
 // App.jsx
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+
 import LandingPage from './pages/landing';
-import SignIn from './pages/Login'; 
+import SignIn from './pages/Login';
 import SignUp from './pages/Registro';
-import Home from './pages/Home'
+import Home from './pages/Home';
 import PracticaMenu from './components/Practicas';
 import Logout from './components/Logout';
 import CheckboxLabels from './pages/Formulario1';
 import CheckboxLabelsPreferences from './pages/Formulario2';
 import PracticaTemaPropio from './pages/TemaPropio';
-import Recorder from './pages/PracticaPropia';
+import Recorder from './components/Recorder';
+//import Recorder from './pages/PracticaPropia';
+//import PracticaAleatoria from './pages/PracticaAleatoria';
+import PracticaTemaAleatorio from './pages/TemaAleatorio';
+import CheckboxTema from './pages/EleccionTema';
+import PracticaModoDebate from './pages/PracticaDebate';
+import PracticaModoExposicion from './pages/PracticaExposicion';
+//import PracticaDebate from './pages/RecordDebate';
+//import PracticaExposicion from './pages/RecordExposicion';
+
+
+
+
+
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem('access_token');
   return token ? children : <Navigate to="/pages/Login" replace />;
 }
+
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
-    setIsAuthenticated(!!token);  
+    setIsAuthenticated(!!token);  // true si hay token
   }, []);
 
   return (
@@ -119,14 +134,95 @@ function App() {
             </PrivateRoute>
           }
         />
-           <Route
-          path="/pages/PracticaPropia"
+
+         <Route
+          path="/practica/aleatorio"
           element={
             <PrivateRoute>
-              <Recorder />
+              <PracticaTemaAleatorio />
             </PrivateRoute>
           }
         />
+
+         <Route
+          path="/pages/PracticaPropia"
+          element={
+            <PrivateRoute>
+               <Recorder modo="propia" />
+            </PrivateRoute>
+          }
+        />
+
+           <Route
+          path="/pages/TemaAleatorio"
+          element={
+            <PrivateRoute>
+              <PracticaTemaAleatorio />
+            </PrivateRoute>
+          }
+        />
+
+
+          <Route
+          path="/pages/PracticaAleatoria"
+          element={
+            <PrivateRoute>
+               <Recorder modo="aleatoria" />
+            </PrivateRoute>
+          }
+        />
+        
+
+        <Route
+         path="/pages/EleccionTema" 
+         element={
+         <PrivateRoute>
+          <CheckboxTema/>
+         </PrivateRoute>
+         }
+         />
+
+         <Route
+         path="/pages/PracticaDebate" 
+         element={
+         <PrivateRoute>
+          <PracticaModoDebate/>
+         </PrivateRoute>
+         }
+         />
+
+
+           <Route
+         path="/pages/PracticaExposicion" 
+         element={
+         <PrivateRoute>
+          <PracticaModoExposicion/>
+         </PrivateRoute>
+         }
+         />
+
+
+        
+          <Route
+          path="/pages/RecordDebate"
+          element={
+            <PrivateRoute>
+               <Recorder modo="debate" />
+            </PrivateRoute>
+          }
+        />
+          
+          <Route
+          path="/pages/RecordExposicion"
+          element={
+            <PrivateRoute>
+               <Recorder modo="exposicion" />
+            </PrivateRoute>
+          }
+        />
+
+         
+       
         <Route path="/logout" element={<Logout redirectTo="/" />} />
       </Routes>
     </Router>
@@ -134,4 +230,5 @@ function App() {
 }
 
 export default App;
+
 
