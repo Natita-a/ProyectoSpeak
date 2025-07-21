@@ -11,11 +11,12 @@ from django.contrib.auth.models import User
 
 
 
+
 class AspectosEvaluados(models.Model):
     id = models.BigAutoField(primary_key=True)
     practica_hecha = models.ForeignKey('PracticasHechas', models.DO_NOTHING, blank=True, null=True)
     transcripcion = models.TextField(blank=True, null=True)
-    usuario = models.ForeignKey('Usuarios', models.DO_NOTHING, blank=True, null=True)
+    usuario = models.ForeignKey(User, models.DO_NOTHING, blank=True, null=True)
     lenguaje_corporal = models.TextField(blank=True, null=True)
     palabras_por_minuto = models.IntegerField(blank=True, null=True)
     tono = models.TextField(blank=True, null=True)
