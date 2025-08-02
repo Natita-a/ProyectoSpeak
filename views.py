@@ -10,6 +10,8 @@ from .models import Practicas
 from .models import PracticasHechas
 from .models import AspectosEvaluados
 from .serializers import PreferenciasUsuariosSerializer
+from .serializers import AspectosEvaluadosSerializer#Nuevo
+from .serializers import PracticaHechaSerializer
 from django.utils import timezone 
 from rest_framework.parsers import MultiPartParser
 from collections import Counter
@@ -103,6 +105,9 @@ class GuardarPreferencia(APIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     
 
+
+    
+
 class VerificarPreferencias(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -120,39 +125,47 @@ class VerificarPreferencias(APIView):
 
 
 
-
+//Modificaciones en GenerarSituacionTemaPropio
 class GenerarSituacionTemaPropio(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes=[IsAuthenticated]
 
-    def get(self, request):
+
+    def get(self,request):
         try:
-            # Se obtienen las preferencias del usuario
-            preferencias = PreferenciasUsuarios.objects.get(usuario=request.user)
-            temas = preferencias.temas_preferencia
+            #Se ven los temas de preferencia del usuario
+            preferencias=PreferenciasUsuarios.objects.get(usuario=request.user)
+            temas=preferencias.temas_preferencia
 
             if not temas:
-                return Response({"error": "No hay temas configurados para este usuario."}, status=400)
+                return Response({"error":"No hay temas configurados para este usuario."},status=400)
+            
+            tema_param = request.query_params.get('tema',None)
 
-            # Elegir un tema aleatorio entre los de preferencia
-            tema_elegido = random.choice(temas)
+            if tema_param:
+                if tema_param not in temas:
+                    return Response({"error": f"El tema '{tema_param}' no esta entre tus temas preferidos."},status=400)
+                tema_elegido=tema_param
+            else:
+                #Apartir del tema elegido se  busca una escena aleatoria
+                tema_elegido=random.choice(temas)
 
-            # Busca prácticas que coincidan con ese tema
-            situaciones = Practicas.objects.filter(tema=tema_elegido)
+            situaciones=Practicas.objects.filter(tema=tema_elegido)
 
             if not situaciones.exists():
-                return Response({"error": f"No hay situaciones registradas para el tema '{tema_elegido}'."}, status=404)
-
-            # Elige una situación aleatoria del tema
-            situacion_elegida = random.choice(list(situaciones))
+                #Este mensaje se muestra cuando no existe una situacion en la base de datos para el tema
+                return Response({"error":f"No hay situaciones registradas para el tema '{tema_elegido}'."},status=404)
+            
+            #Se muestra la situacion a simular
+            situacion_elegida=random.choice(list(situaciones))
 
             return Response({
-                "tema": tema_elegido,
-                "situacion": {
-                     "id": situacion_elegida.id,
+                "tema":tema_elegido,
+                "situacion":{
+                    "id": situacion_elegida.id,
                     "titulo": situacion_elegida.situacion,
                     "contexto": situacion_elegida.contexto,
-                    "recomendacion": situacion_elegida.recomendacion,
-                    "tipo_simulacion": situacion_elegida.tipo_simulacion,
+                    "recomendacion":situacion_elegida.recomendacion,
+                    "tipo_simulacion":situacion_elegida.tipo_simulacion,
                     "tiempo": situacion_elegida.tiempo,
                 }
             })
@@ -165,7 +178,30 @@ class GenerarSituacionTemaPropio(APIView):
             print("ERROR DETECTADO:")
             print(traceback.format_exc())
             return Response({"error": str(e)}, status=500)
-        
+     
+
+
+
+
+
+
+
+
+
+class ObtenerTemasPreferidos(APIView):
+    permission_classes=[IsAuthenticated]
+
+    def get(self, request):
+        try:
+            #Se obtienen los temas preferidos del usuario apartir de sus preferencias
+            preferencias=PreferenciasUsuarios.objects.get(usuario=request.user)
+            temas=preferencias.temas_preferencia
+            return Response({"temas":temas})
+        except PreferenciasUsuarios.DoesNotExist:
+            return Response({"error": "No se encontraron preferencias para este usuario."}, status=404)
+
+
+
 
 
 
@@ -456,6 +492,8 @@ Texto: {texto_transcripcion}
 Evalúa el discurso en relacion a la situacion, el contexto y la recomendacion.Luego, evalúa la coherencia estructural (conexión lógica, fluidez).Esta evaluacion debe estar resumida en 50 palabras en su conjunto
 
 No intentes justificar contenido irrelevante inventando conexiones que no existen.
+
+Redacta una retroalimentación sin  ningun tipo de saludo ni expliques tu rol y sin usar formato Markdown ni negritas.
 """
 
         response = requests.post(
@@ -493,7 +531,7 @@ def obtener_retroalimentacion(practica_hecha_id,texto_transcripcion):
 
         prompt_llama = f"""
 Eres un coach que da retroalimentación para mejorar la fluidez al hablar, detectando velocidad, pausas y muletillas.Evalúa este texto y dame 2 consejos claros para mejorar.
-
+Redacta una retroalimentación sin  ningun tipo de saludo ni expliques tu rol y sin usar formato Markdown ni negritas.
 A continuación se presenta una situación , un  contexto, y una recomendacion de un discurso para evaluar:
 
 Situación: {situacion}
@@ -605,3 +643,70 @@ class GenerarSituacionModoExposicion(APIView):
             print("ERROR DETECTADO:")
             print(traceback.format_exc())
             return Response({"error": str(e)}, status=500)
+        
+
+
+
+
+
+
+class ObtenerAspectosEvaluados(APIView):
+    def get(self,request,practica_hecha_id):
+        try:
+            aspecto=AspectosEvaluados.objects.get(
+                practica_hecha_id=practica_hecha_id,
+                practica_hecha__usuario=request.user
+            )
+            serializer=AspectosEvaluadosSerializer(aspecto)
+            return Response(serializer.data)
+        except AspectosEvaluados.DoesNotExist:
+            return Response(
+                {'error':'No se encontro el analisis de esta practica para este usuario.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except AspectosEvaluados.MultipleObjectsReturned:
+            aspecto=AspectosEvaluados.objects.filter(
+                practica_hecha_id=practica_hecha_id,
+                practica_hecha__usuario=request.user
+            ).latest('id')  
+            serializer = AspectosEvaluadosSerializer(aspecto)
+            return Response(serializer.data)
+
+
+
+class PracticasHechasUsuario(APIView):
+    permission_classes=[IsAuthenticated]
+
+    def get(self,request):
+        #Se obtiene las practica hechas para msotrarse en el historial
+        practicas=PracticasHechas.objects.filter(usuario=request.user).order_by('fecha')
+        serializer=PracticaHechaSerializer(practicas, many=True)
+        return Response(serializer.data)
+
+
+
+class ActualizarEstadoPractica(APIView):
+    permission_classes =[IsAuthenticated]
+ 
+    def patch(self, request , practica_hecha_id):
+        #Se ve el estado de la practica
+        nuevo_estado = request.data.get('estado')
+        #Se definen los posibles estados de la practica
+        estados_validos = ['iniciada', 'completada', 'cancelada']
+
+        if nuevo_estado not in estados_validos:
+            return Response({"error": "Estado inválido"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            #Se verifica que la practica exista
+            practica = PracticasHechas.objects.get(id=practica_hecha_id, usuario=request.user)
+        except PracticasHechas.DoesNotExist:
+            return Response({"error": "Práctica no encontrada"}, status=status.HTTP_404_NOT_FOUND)
+
+        #Se actualiza el estado de la practica a "completada"
+        practica.estado = nuevo_estado
+        practica.save()
+
+        return Response({"mensaje": f"Estado actualizado a {nuevo_estado}"}, status=status.HTTP_200_OK)
+
+
