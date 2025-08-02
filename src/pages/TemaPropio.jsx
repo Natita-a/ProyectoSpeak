@@ -1,91 +1,202 @@
-import React, { useEffect, useState } from 'react';
+import React,{useEffect,useState} from 'react';
 import { useNavigate } from 'react-router-dom';
-import '../styles/TemaPropio.css';
+import{
+  Box,
+  Typography,
+  Button,
+  CircularProgress,
+  Checkbox,
+  FormControlLabel,
+}from '@mui/material'
 import api from '../components/User';
 
 
-const PracticaTemaPropio = () => {
-  const navigate = useNavigate();
-  const [tema, setTema] = useState('');
-  const [situacion, setSituacion] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+const PracticaTemaPropioConSeleccion=()=>{
+  const navigate=useNavigate();
+  
+  const [temas,setTemas]=useState([]);
+  const [loadingTemas,setLoadingTemas]=useState(true);
+  const [errorTemas,setErrorTemas]=useState('');
+  const [temaSeleccionado,setTemaSeleccionado]=useState('');
+  const [errorSeleccion,setErrorSeleccion]=useState('');
+  const [loadingSituacion, setLoadingSituacion]=useState(false);
+  const [errorSituacion,setErrorSituacion]=useState('');
 
-  useEffect(() => {
-  const fetchDatos = async () => {
-    try {
-      const res = await api.get('generar-temas/');
-      const data = res.data;
-      setTema(data.tema);
-      setSituacion(data.situacion);
-      setLoading(false);
-    } catch (err) {
-      setError(err.response?.data?.detail || 'Error al obtener datos');
-      setLoading(false);
+  useEffect(()=>{
+    const fetchTemas=async()=>{
+      try{
+        //Se obtienen los temas preferidos
+        const res=await api.get('obtener-temas-preferidos/');
+        setTemas(res.data.temas);
+      }catch(error){
+        setErrorTemas('Error al cargar los temas preferidos.');
+      }finally{
+        setLoadingTemas(false);
+      }
+    };
+    fetchTemas();
+  },[]);
+
+
+  const handleChangeTema=(tema)=>(event)=>{
+    if(event.target.checked){
+      setTemaSeleccionado(tema);
+    }else{
+      setTemaSeleccionado('');
+    }
+    setErrorSeleccion('');
+    setErrorSituacion('');
+  };
+
+
+
+  const handleGenerarSituacion=async()=>{
+    if(!temaSeleccionado){
+      //Pide que se seleccione un tema para poder hacer una simulacion de este 
+      setErrorSeleccion('Por favor selecciona un tema.');
+      return;
+    }
+    setLoadingSituacion(true);
+    setErrorSituacion('');
+
+    try{
+      //Llama a generar-temas para generar la escena del tema seleccionado
+      const res=await api.get('generar-temas/' ,{
+        params:{tema:temaSeleccionado},
+      });
+      navigate('/pages/TemaPropioGenerado',{
+        state:{
+          tema:temaSeleccionado,
+          situacion:res.data.situacion,
+        },
+      });
+    }catch(error){
+      setErrorSituacion(
+        error.response?.data?.error || 'Error al generar la situación.'
+      );
+    }finally{
+      setLoadingSituacion(false);
     }
   };
 
-  fetchDatos();
-}, []);
+  if(loadingTemas)
+    return(
+     <Box sx={{display:'flex',justifyContent:'center',p:4}}>
+      <Typography>Cargando temas preferidos...</Typography>
+     </Box>
+    );
 
-  // Para que cambie solamente en esta pagina el body
-  useEffect(() => {
-    document.body.classList.add('fondo-tema-propio');
-    return () => {
-      document.body.classList.remove('fondo-tema-propio');
-    };
-  }, []);
+  if(errorTemas)
+    return(
+     <Box sx={{ display:'flex',justifyContent:'center',p:4}}>
+       <Typography color='error'>{errorTemas}</Typography>
+     </Box>
+    );
 
-  if (loading) return <p>Cargando situación...</p>;
-  if (error) return <p>Error: {error}</p>;
+    return(
+      <Box
+       sx={{
+        display:'flex',
+        justifyContent:'center',
+        p:4,
+        backgroundColor:'#f0f0f0',
+        minHeight:'100vh',
+       }}
+      >
 
-  return (
-    <div id="tema-propio1">
-      <h2 className="titulo">
-        Tema seleccionado: <span className="tema">{tema}</span>
-      </h2>
+      <Box sx={{maxWidth:500, width:'100%'}}>
+        <Typography variant='h5' sx={{fontWeight:'bold', mb:3, textAlign:'center'}}>
+          Selecciona el tema a practicar
+        </Typography>
 
-      <h3 className="subtitulo">Situación para practicar:</h3>
-      {situacion && (
-        <div id="tema-propio2" className="situacion">
-          <p>
-            <strong>Título:</strong> {situacion.titulo}
-          </p>
-          <p>
-            <strong>Contexto:</strong> {situacion.contexto}
-          </p>
-          <p>
-            <strong>Recomendación:</strong> {situacion.recomendacion}
-          </p>
-          <p>
-            <strong>Tiempo:</strong> {situacion.tiempo} minutos
-          </p>
+        {temas.length===0 &&(
+          <Typography sx={{ textAlign:'center', mb:2}}>
+           No tienes temas preferidos guardados.
+          </Typography>
+        )}
 
-        <button
-  className="boton-tema"
-  onClick={async () => {
-    try {
-     const response = await api.post('escena-propia/', {
-        simulacion_id: situacion.id  // Usar el id de la situacion
-      });
-      navigate('/pages/PracticaPropia',{
-        state:{
-          tiempo:situacion.tiempo,
-           practica_hecha_id: response.data.practica_hecha_id
-        }
-      });
-    } catch (error) {
-      alert('Error al iniciar la práctica');
-      console.error(error);
-    }
-  }}
->
-  Iniciar Práctica
-</button>
-        </div>
-      )}
-    </div>
-  );
+        
+        {temas.map((tema)=>(
+          <Box
+          key={tema}
+          sx={{
+            width:'100%',
+            height:100,
+            border:'1px solid #ccc',
+            borderRadius:3,
+            display:'flex',
+            alignItems:'center',
+            paddingX:3,
+            mb:2,
+            backgroundColor:'#fff',
+            boxShadow:temaSeleccionado===tema? 4:2,
+            borderColor:temaSeleccionado===tema?'#1976d2':'#ccc',
+            cursor:'pointer',
+            transition: 'all 0.3s ease',
+            '&:hover':{ 
+              boxShadow:4,
+              borderColor:'#1976d2',
+            },
+          }}
+          onClick={()=>  
+            temaSeleccionado=== tema
+            ? setTemaSeleccionado('')
+            : setTemaSeleccionado(tema)
+          }
+          >
+
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={temaSeleccionado === tema}
+                  onChange={handleChangeTema(tema)}
+                  sx={{
+                    color: '#1976d2',
+                    '&.Mui-checked': {
+                      color: '#1976d2',
+                    },
+                  }}
+                />
+              }
+              label={<Typography sx={{ fontSize: 18 }}>{tema}</Typography>}
+              sx={{ width: '100%', marginLeft: 1 }}
+            />
+          </Box>
+        ))}
+
+        {errorSeleccion && (
+          <Typography color="error" sx={{mt:1,textAlign:'center'}}>
+          {errorSeleccion}
+          </Typography>
+        )}
+
+
+        <Button
+        variant='contained'
+        color='primary'
+        onClick={handleGenerarSituacion}
+        disabled={loadingSituacion}
+        sx={{mt:3,display:'block',mx:'auto'}}
+        >
+          {loadingSituacion?(
+            <CircularProgress size={24} color='inherit'/>
+          ):(
+            'Generar Situación'
+          )}
+        </Button>
+
+        {errorSituacion && (
+          <Typography color='error' sx={{mt:2, textAlign:'center'}}>
+           {errorSituacion}
+          </Typography>
+        )}
+      </Box>
+      </Box>
+
+    );
 };
 
-export default PracticaTemaPropio;
+
+export default PracticaTemaPropioConSeleccion;
+       
+
