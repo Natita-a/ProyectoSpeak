@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
 import { FaStopCircle, FaMicrophone } from "react-icons/fa";
-import { useLocation } from "react-router-dom";
+import { useLocation,useNavigate } from "react-router-dom";
 import '../styles/Recorder.css';
 import api from '../components/User';
+import LoaderMicrofonoOndas from "./Loader";
+import ModalFinal from "./ModalFinal";
 
 export default function Recorder() {
   const [isRecording, setIsRecording] = useState(false);
@@ -11,6 +13,9 @@ export default function Recorder() {
   const [time, setTime] = useState(tiempoInicialMinutos * 60);
   const [transcripcion, setTranscripcion] = useState('');
   const [mensajeGuardado, setMensajeGuardado] = useState('');
+  const [grabacionFinalizada,setGrabacionFinalizada]=useState(false);
+  const [cargando,setCargando]=useState(false);
+  const navigate=useNavigate();
   const mediaRecorder = useRef(null);
   const intervalId = useRef(null);
   const tiempoInicioRef=useRef(null);
@@ -50,12 +55,17 @@ const toggleRecording = async () => {
     duracionRef.current = duracionSegundos / 60; //Se convierte a minutos
     mediaRecorder.current?.stop();
     setIsRecording(false);
+    setGrabacionFinalizada(true);
+    setTimeout(()=>{
+      setCargando(true);
+    },2000)
   } else {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorder.current = new MediaRecorder(stream);
 
       mediaRecorder.current.ondataavailable = async (e) => {
+        setCargando(true);
         const audioBlob = new Blob([e.data], { type: "audio/wav" });
 
         const formData = new FormData();
@@ -79,6 +89,15 @@ const toggleRecording = async () => {
             duracion: duracionRef.current //  Duración medida exactamente
           });
           setMensajeGuardado(saveResponse.data.mensaje);
+
+           await api.patch(`practicas-hechas/${practicaHechaId}/estado/`, {
+    estado: 'completada' //patch
+  });
+
+          setTimeout(()=>{
+            navigate('/pages/Reporte',{state:{practica_hecha_id:practicaHechaId}});
+          })
+                       
         } catch (error) {
           console.error('Error durante la transcripción o guardado:', error);
           setMensajeGuardado("Error al procesar la transcripción.");
@@ -96,6 +115,9 @@ const toggleRecording = async () => {
   }
 };
 
+if(cargando){
+  return <LoaderMicrofonoOndas loaderOpen={true}/>
+}
 
   return (
     <div className="recorder-container">
@@ -114,9 +136,10 @@ const toggleRecording = async () => {
           </button>
 
           <button
-            onClick={toggleRecording}
+            onClick={()=>{if(!isRecording && !grabacionFinalizada)toggleRecording();}}
             className="record-button"
-            title={isRecording ? "Grabando..." : "Iniciar grabación"}
+            disabled={isRecording || grabacionFinalizada}
+            title={ grabacionFinalizada ? "Grabacion finalizada" : isRecording ? "Grabando..." : "Iniciar grabación"}
           >
             <FaMicrophone className="icon" />
           </button>
@@ -133,6 +156,8 @@ const toggleRecording = async () => {
             {mensajeGuardado}
           </div>
         )}
+
+
       </div>
     </div>
   );
