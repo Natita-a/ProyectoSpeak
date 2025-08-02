@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useState } from 'react';
-import { Link as RouterLink, useNavigate } from 'react-router-dom'; // para redirigir después del login
+import { Link as RouterLink, useNavigate } from 'react-router-dom'; 
 import Button from '@mui/material/Button';
 import CssBaseline from '@mui/material/CssBaseline';
 import TextField from '@mui/material/TextField';
@@ -13,6 +13,7 @@ import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import Typography from '@mui/material/Typography';
 import Container from '@mui/material/Container';
 import api from '../components/User';
+
 
 function Copyright() {
   return (
@@ -60,13 +61,16 @@ export default function SignIn() {
       }
 
     } catch (err) {
-      if (err.response?.data?.detail) {
-        setError(err.response.data.detail);
+      if (err.response?.data?.detail === "No active account found with the given credentials") {
+       setError("Correo o contraseña incorrectos. Por favor, verifica tus datos.");
       } else {
-        setError('Correo o contraseña incorrectos');
+       setError("Ocurrió un error al iniciar sesión.");
       }
+      setTimeout(()=>setError(''),4000);
     }
   };
+
+
 
 
   return (
@@ -80,10 +84,15 @@ export default function SignIn() {
           alignItems: 'center',
         }}
       >
-        
         <Typography component="h1" variant="h5">
-                <img src="/images/favicon.png" alt="Logo" style={{ width: '80px', height: '80px' }} />
+            <img src="/images/favicon.png" alt="Logo" style={{ width: '80px', height: '80px' }} />
         </Typography>
+
+              
+         <Typography component="h2" variant="h6" sx={{ mt: 2 }}>
+           Iniciar  Sesion
+        </Typography>
+
         <Box component="form" noValidate sx={{ mt: 1 }} onSubmit={handleSubmit}>
           <TextField
             margin="normal"
