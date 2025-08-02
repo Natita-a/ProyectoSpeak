@@ -14,6 +14,7 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+
 from django.contrib import admin
 from django.urls import path,include
 from Proyecto.views import RegistroUsuario
@@ -21,13 +22,17 @@ from Proyecto.views import GuardarProposito
 from Proyecto.views import GuardarPreferencia
 from Proyecto.views import VerificarPreferencias
 from Proyecto.views import GenerarSituacionTemaPropio
-from Proyecto.views import GenerarSituacionTemaAleatorio#Nuevo
+from Proyecto.views import GenerarSituacionTemaAleatorio
 from Proyecto.views import EscenarioPracticaPropia
-from Proyecto.views import EscenarioPracticaAleatoria#Nuevo
+from Proyecto.views import EscenarioPracticaAleatoria
 from Proyecto.views import TranscripcionAudioView
 from Proyecto.views import GuardarTranscripcionView
-from Proyecto.views import GenerarSituacionModoDebate#Nuevo
-from Proyecto.views import GenerarSituacionModoExposicion#Nuevo
+from Proyecto.views import GenerarSituacionModoDebate
+from Proyecto.views import GenerarSituacionModoExposicion
+from Proyecto.views import ObtenerAspectosEvaluados#Nuevo
+from Proyecto.views import ObtenerTemasPreferidos#Nuevo
+from Proyecto.views import PracticasHechasUsuario#Nuevo
+from Proyecto.views import ActualizarEstadoPractica#Nuevo
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
@@ -52,8 +57,13 @@ urlpatterns = [
     path('api/guardar-transcripcion/',GuardarTranscripcionView.as_view(),name='guardar-transcripcion'),
     path('api/generar-modo-debate/',GenerarSituacionModoDebate.as_view(),name='generar-modo-debate'),
     path('api/generar-modo-exposicion/',GenerarSituacionModoExposicion.as_view(),name='generar-modo-exposicion'),
+    path('api/aspectos-evaluados/<int:practica_hecha_id>/', ObtenerAspectosEvaluados.as_view(), name='aspectos-evaluados'),
+    path('api/obtener-temas-preferidos/',ObtenerTemasPreferidos.as_view(), name='obtener-temas-preferidos'),
+    path('api/practicas-hechas/',PracticasHechasUsuario.as_view(), name='practicas-hechas'),
+    path('api/practicas-hechas/<int:practica_hecha_id>/estado/', ActualizarEstadoPractica.as_view(), name='actualizar-estado-practica'),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 
 
 ]
+
