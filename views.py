@@ -12,7 +12,8 @@ from .models import AspectosEvaluados
 from .serializers import PreferenciasUsuariosSerializer
 from .serializers import AspectosEvaluadosSerializer#Nuevo
 from .serializers import PracticaHechaSerializer
-from django.utils import timezone 
+from django.utils import timezone
+from django.db.models import Exists, OuterRef
 from rest_framework.parsers import MultiPartParser
 from collections import Counter
 import os
@@ -125,7 +126,7 @@ class VerificarPreferencias(APIView):
 
 
 
-//Modificaciones en GenerarSituacionTemaPropio
+
 class GenerarSituacionTemaPropio(APIView):
     permission_classes=[IsAuthenticated]
 
@@ -157,7 +158,11 @@ class GenerarSituacionTemaPropio(APIView):
             
             #Se muestra la situacion a simular
             situacion_elegida=random.choice(list(situaciones))
-
+            # Construir la URL completa de la imagen
+            imagen_url=None
+            if situacion_elegida.imagen_url:
+            # request.build_absolute_uri genera la URL completa incluyendo host y puerto
+               imagen_url = request.build_absolute_uri(situacion_elegida.imagen_url)
             return Response({
                 "tema":tema_elegido,
                 "situacion":{
@@ -167,6 +172,7 @@ class GenerarSituacionTemaPropio(APIView):
                     "recomendacion":situacion_elegida.recomendacion,
                     "tipo_simulacion":situacion_elegida.tipo_simulacion,
                     "tiempo": situacion_elegida.tiempo,
+                    "imagen_url":imagen_url
                 }
             })
 
@@ -211,13 +217,18 @@ class GenerarSituacionTemaAleatorio(APIView):
 
     def get(self, request):
         try:
-           
-            situaciones_varias=Practicas.objects.all()
+             #Se modifico para solo filtre con modo_aleatorio
+            situaciones_varias=Practicas.objects.filter(tipo_simulacion='modo_aleatorio')
 
             if not situaciones_varias.exists():
                 return Response({"error":"No hay situaciones registradas."},status=404)
             
             situacion_elegida=random.choice(list(situaciones_varias))
+
+            imagen_url=None
+            if situacion_elegida.imagen_url:
+            # request.build_absolute_uri genera la URL completa incluyendo host y puerto
+               imagen_url = request.build_absolute_uri(situacion_elegida.imagen_url)
 
             return Response({
                 "tema":situacion_elegida.tema,
@@ -228,6 +239,7 @@ class GenerarSituacionTemaAleatorio(APIView):
                     "recomendacion": situacion_elegida.recomendacion,
                     "tipo_simulacion": situacion_elegida.tipo_simulacion,
                     "tiempo": situacion_elegida.tiempo,
+                    "imagen_url":imagen_url
                 }
             })
 
@@ -420,6 +432,8 @@ class GuardarTranscripcionView(APIView):
 
         #Obtiene la coherencia
 
+        claridad=obtener_claridad(practica_hecha_id,transcripcion)
+
         coherencia=obtener_coherencia(practica_hecha_id,transcripcion)
 
 
@@ -435,6 +449,7 @@ class GuardarTranscripcionView(APIView):
             palabras_por_minuto=ppm,
             velocidad=velocidad,
             errores=muletillas_detectadas,
+            claridad = claridad,
             coherencia=coherencia,
             retroalimentacion=retroalimentacion
                   
@@ -447,9 +462,9 @@ class GuardarTranscripcionView(APIView):
 
 
 
-nlp=spacy.load("es_core_news_sm")
+"""nlp=spacy.load("es_core_news_sm")
 
-muletillas_comunes={'este','eh','bueno','entonces','pos','pues','mmm','ah','vale','sabes','o','sea','como'}
+muletillas_comunes={'este','eh','bueno','entonces','pos','pues','mmm','ah','vale','sabes','o','sea','como', 'no?' , 'entiendes','sabes',','digamos','claro','obviamente'}
 
 def detectar_muletillas(texto):
     doc=nlp(texto.lower())
@@ -468,7 +483,122 @@ def detectar_muletillas(texto):
             
                 posibles_muletillas[palabra] = frecuencia
 
+    return posibles_muletillas"""
+
+
+nlp = spacy.load("es_core_news_sm")
+
+muletillas_comunes = {'este', 'eh', 'bueno', 'entonces', 'pos', 'pues', 'mmm', 'ah', 'vale', 'sabes', 'o', 'sea', 'como', 'no?' , 'entiendes','sabes','digamos','claro','obviamente'}
+
+"""
+def detectar_muletillas(texto):
+    # SPACY: Procesa el texto y lo convierte en documento lingüístico
+    doc = nlp(texto.lower())
+    palabras_repetidas = Counter()
+    
+    # SPACY: Analiza cada token (palabra) del texto
+    for token in doc:
+        # SPACY: Filtra puntuación, espacios y palabras muy cortas
+        if token.is_punct or token.is_space or len(token.text) <= 2:
+            continue
+        palabras_repetidas[token.text] += 1
+    
+    posibles_muletillas = {}
+    for palabra, frecuencia in palabras_repetidas.items():
+        if frecuencia > 2:
+            # SPACY: Encuentra el token para analizar sus propiedades
+            token_filtrado = next((t for t in doc if t.text == palabra), None)
+            # SPACY: Usa el POS tagging para identificar tipos de palabras
+            if (palabra in muletillas_comunes or 
+                (token_filtrado and token_filtrado.pos_ in {"INTJ", "CCONJ", "SCONJ", "PART"})):
+                posibles_muletillas[palabra] = frecuencia
+    
     return posibles_muletillas
+
+"""
+
+def detectar_muletillas(texto):
+    doc = nlp(texto.lower())
+    palabras_repetidas = Counter()
+    
+    for token in doc:
+        if token.is_punct or token.is_space or len(token.text) <= 2:
+            continue
+        palabras_repetidas[token.text] += 1
+    
+    mensajes_errores = {}
+    
+    for palabra, frecuencia in palabras_repetidas.items():
+        if frecuencia > 2:
+            token_filtrado = next((t for t in doc if t.text == palabra), None)
+            if (palabra in muletillas_comunes or 
+                (token_filtrado and token_filtrado.pos_ in {"INTJ", "CCONJ", "SCONJ", "PART"})):
+                
+                
+                if frecuencia >= 5:
+                    mensaje = f"Usas '{palabra}' con mucha frecuencia ({frecuencia} veces). Intenta reducir su uso."
+                elif frecuencia >= 3:
+                    mensaje = f"Usas '{palabra}' varias veces ({frecuencia} veces). Puedes intentar variar tu vocabulario."
+                else:
+                    mensaje = f"Detectamos '{palabra}' repetida {frecuencia} veces."
+                
+               
+                error_id = f"muletilla_{palabra}"
+                mensajes_errores[error_id] = mensaje
+    
+    return mensajes_errores
+
+
+
+
+def obtener_claridad(practica_hecha_id, texto_transcripcion):
+    try:
+        practica_hecha = PracticasHechas.objects.get(id=practica_hecha_id)
+        practica = practica_hecha.simulacion
+
+        situacion = practica.situacion
+        contexto = practica.contexto
+        recomendacion=practica.recomendacion
+
+        prompt_llama = f"""
+Eres un evaluador experto en comunicación oral.
+
+A continuación se presenta una situación , un  contexto, y una recomendacion de un discurso para evaluar:
+
+Situación: {situacion}
+Contexto: {contexto}
+Recomendacion:{recomendacion}
+Texto: {texto_transcripcion}
+
+Evalúa el discurso en relacion a la situacion, el contexto y la recomendacion.Luego, evalúa la claridad del discurso ¿Es facil de entender?¿Se relaciona con el contexto proporcionado?.Esta evaluacion debe estar resumida en 20 palabras en su conjunto
+
+No intentes justificar contenido irrelevante inventando conexiones que no existen.Al final clasifica simple con Claro o No Claro.
+
+Redacta una retroalimentación sin  ningun tipo de saludo ni expliques tu rol y sin usar formato Markdown ni negritas.
+"""
+
+        response = requests.post(
+            "http://localhost:11434/api/generate",  # Puerto y endpoint local de Ollama
+            json={
+                "model": "llama3.2",
+                "prompt": prompt_llama,
+                "stream": False
+            }
+        )
+
+        resp_json = response.json()
+        if "response" in resp_json:
+            return resp_json["response"]
+        else:
+            return f"Error: respuesta inesperada {resp_json}"
+
+    except PracticasHechas.DoesNotExist:
+        return "No se encontró la práctica hecha"
+    except requests.exceptions.RequestException as e:
+        return f"Error en la conexión con Ollama: {e}"
+
+
+
 
 def obtener_coherencia(practica_hecha_id, texto_transcripcion):
     try:
@@ -578,23 +708,29 @@ class GenerarSituacionModoDebate(APIView):
             situaciones = Practicas.objects.filter(tipo_simulacion="modo_debate")
 
             if not situaciones.exists():
-                return Response({"error": f"No hay situaciones registradas para el tema '{tema_elegido}'."}, status=404)
+                return Response({"error": f"No hay situaciones registradas para el tema'."}, status=404)
+            
+            #postura = random.choice(list('rol_afavor','rol_encontra'))
+            
 
             # Elige una situación aleatoria del tema
             situacion_elegida = random.choice(list(situaciones))
 
-            return Response({
-                "tema": situacion_elegida.tema,
-                "situacion": {
-                     "id": situacion_elegida.id,
-                    "titulo": situacion_elegida.situacion,
-                    "contexto": situacion_elegida.contexto,
-                    "recomendacion": situacion_elegida.recomendacion,
-                    "tipo_simulacion": situacion_elegida.tipo_simulacion,
-                    "tiempo": situacion_elegida.tiempo,
-                }
-            })
 
+           
+            return Response({
+     "tema": situacion_elegida.tema,
+    "situacion": {
+        "id": situacion_elegida.id,
+        "titulo": situacion_elegida.situacion,
+        "contexto": situacion_elegida.contexto,
+        "rol_afavor": situacion_elegida.rol_afavor,
+        "rol_encontra": situacion_elegida.rol_encontra,
+        "recomendacion": situacion_elegida.recomendacion,
+        "tipo_simulacion": situacion_elegida.tipo_simulacion,
+        "tiempo": situacion_elegida.tiempo,
+    }
+})
         except PreferenciasUsuarios.DoesNotExist:
             return Response({"error": "No se encontraron simulacion en modo debate."}, status=404)
 
@@ -622,16 +758,23 @@ class GenerarSituacionModoExposicion(APIView):
 
             # Elige una situación aleatoria del tema
             situacion_elegida = random.choice(list(situaciones))
+            imagen_url = None
+            if situacion_elegida.imagen_url:
+                
+                imagen_url = request.build_absolute_uri(situacion_elegida.imagen_url)
+                print(f"URL de imagen generada: {imagen_url}")  
 
             return Response({
                 "tema": situacion_elegida.tema,
                 "situacion": {
-                     "id": situacion_elegida.id,
+                    "id": situacion_elegida.id,
                     "titulo": situacion_elegida.situacion,
                     "contexto": situacion_elegida.contexto,
                     "recomendacion": situacion_elegida.recomendacion,
                     "tipo_simulacion": situacion_elegida.tipo_simulacion,
                     "tiempo": situacion_elegida.tiempo,
+                    "imagen_url": imagen_url,
+                    "descripcion": situacion_elegida.descripcion,
                 }
             })
 
@@ -675,12 +818,17 @@ class ObtenerAspectosEvaluados(APIView):
 
 
 class PracticasHechasUsuario(APIView):
-    permission_classes=[IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
-    def get(self,request):
-        #Se obtiene las practica hechas para msotrarse en el historial
-        practicas=PracticasHechas.objects.filter(usuario=request.user).order_by('fecha')
-        serializer=PracticaHechaSerializer(practicas, many=True)
+    def get(self, request):
+        # Solo trae prácticas que tienen al menos un registro en aspectos_evaluados
+        practicas = PracticasHechas.objects.annotate(
+            tiene_aspectos=Exists(
+                AspectosEvaluados.objects.filter(practica_hecha_id=OuterRef('id'))
+            )
+        ).filter(tiene_aspectos=True, usuario=request.user).order_by('fecha')
+
+        serializer = PracticaHechaSerializer(practicas, many=True)
         return Response(serializer.data)
 
 
